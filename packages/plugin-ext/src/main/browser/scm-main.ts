@@ -273,6 +273,7 @@ class ScmProviderImpl implements ScmProvider {
                     sourceControlHandle,
                     groupHandle,
                     resource.handle,
+                    group,
                     new URI(resource.resourceUri),
                     group,
                     scmDecorations);
@@ -331,6 +332,7 @@ class ScmResourceImpl implements ScmResource {
         private handle: number,
         private sourceControlHandle: number,
         private groupHandle: number,
+        readonly group: ScmResourceGroup,
         public sourceUri: URI,
         public resourceGroup: ScmResourceGroup,
         public decorations?: ScmResourceDecorations

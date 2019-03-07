@@ -343,9 +343,20 @@ export class GitContribution implements
     }
 
     private async getGroup(label: string, provider: ScmProvider, changes: GitFileChange[]): Promise<ScmResourceGroup> {
+        const sort = (l: ScmResource, r: ScmResource) =>
+            l.sourceUri.toString().substring(l.sourceUri.toString().lastIndexOf('/')).localeCompare(r.sourceUri.toString().substring(r.sourceUri.toString().lastIndexOf('/')));
+        const group: ScmResourceGroup = {
+            label,
+            hideWhenEmpty: false,
+            id: `${label}_${GitContribution.SCM_GROUP_ID ++}`,
+            provider,
+            onDidChange: provider.onDidChange,
+            resources: []
+        };
         const scmResources: ScmResource[] = await Promise.all(changes.map(async change => {
             const icon = await this.labelProvider.getIcon(new URI(change.uri));
             const resource: ScmResource = {
+                group,
                 sourceUri: new URI(change.uri),
                 decorations: {
                     icon,
@@ -362,16 +373,9 @@ export class GitContribution implements
             };
             return resource;
         }));
-        const sort = (l: ScmResource, r: ScmResource) =>
-            l.sourceUri.toString().substring(l.sourceUri.toString().lastIndexOf('/')).localeCompare(r.sourceUri.toString().substring(r.sourceUri.toString().lastIndexOf('/')));
-        return {
-            label,
-            hideWhenEmpty: false,
-            id: `${label}_${GitContribution.SCM_GROUP_ID ++}`,
-            provider,
-            onDidChange: provider.onDidChange,
-            resources: scmResources.sort(sort)
-        };
+        scmResources.sort(sort);
+        scmResources.forEach(resource => group.resources.push(resource));
+        return group;
     }
 
     /** Detect and handle added or removed repositories. */
@@ -382,11 +386,13 @@ export class GitContribution implements
                 .find(repo => this.dirtyRepositories.every(dirtyRepo => dirtyRepo.localUri !== repo.localUri));
         if (added) {
             this.registerScmProvider(added);
+            this.dirtyRepositories.push(added);
         }
         const removed =
             this.dirtyRepositories
                 .find(dirtyRepo => this.repositoryProvider.allRepositories.every(repo => repo.localUri !== dirtyRepo.localUri));
         if (removed) {
+            this.dirtyRepositories.push(removed);
             const removedScmRepo = this.scmService.repositories.find(scmRepo => scmRepo.provider.rootUri === removed.localUri);
             if (removedScmRepo) {
                 removedScmRepo.dispose();
@@ -396,7 +402,6 @@ export class GitContribution implements
                 }
             }
         }
-        this.dirtyRepositories = this.repositoryProvider.allRepositories;
     }
 
     private registerScmProvider(repository: Repository): ScmRepository {
@@ -422,7 +427,7 @@ export class GitContribution implements
 
     registerMenus(menus: MenuModelRegistry): void {
         [GIT_COMMANDS.FETCH, GIT_COMMANDS.PULL_DEFAULT, GIT_COMMANDS.PULL, GIT_COMMANDS.PUSH_DEFAULT, GIT_COMMANDS.PUSH, GIT_COMMANDS.MERGE].forEach(command =>
-            menus.registerMenuAction(ScmWidget.ContextMenu.OTHER_GROUP, {
+            menus.registerMenuAction(ScmWidget.ContextMenu.FIRST_GROUP, {
                 commandId: command.id,
                 label: command.label.slice('Git: '.length)
             })
@@ -456,7 +461,7 @@ export class GitContribution implements
         [GIT_COMMANDS.STASH, GIT_COMMANDS.APPLY_STASH,
             GIT_COMMANDS.APPLY_LATEST_STASH, GIT_COMMANDS.POP_STASH,
             GIT_COMMANDS.POP_LATEST_STASH, GIT_COMMANDS.DROP_STASH].forEach(command =>
-            menus.registerMenuAction(ScmWidget.ContextMenu.OTHER_GROUP, {
+            menus.registerMenuAction(ScmWidget.ContextMenu.SECOND_GROUP, {
                 commandId: command.id,
                 label: command.label
             })

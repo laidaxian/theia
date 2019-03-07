@@ -35,7 +35,6 @@ before(() => {
 describe('theia left panel', () => {
     it("should show 'Files' and 'Scm'", () => {
         expect(leftPanel.doesTabExist('Files')).to.be.true;
-        expect(leftPanel.doesTabExist('Scm')).to.be.true;
     });
 
     describe('files tab', () => {
@@ -47,18 +46,6 @@ describe('theia left panel', () => {
             leftPanel.openCloseTab('Files');
             expect(leftPanel.isFileTreeVisible()).to.be.false;
             expect(leftPanel.isTabActive('Files')).to.be.false;
-        });
-    });
-
-    describe('scm tab', () => {
-        it('should open/close the scm tab', () => {
-            leftPanel.openCloseTab('Scm');
-            expect(leftPanel.isScmContainerVisible()).to.be.true;
-            expect(leftPanel.isTabActive('Scm')).to.be.true;
-
-            leftPanel.openCloseTab('Scm');
-            expect(leftPanel.isScmContainerVisible()).to.be.false;
-            expect(leftPanel.isTabActive('Scm')).to.be.false;
         });
     });
 });

@@ -61,8 +61,10 @@ export interface ScmResourceGroup {
 }
 
 export interface ScmResource {
+    readonly group: ScmResourceGroup;
     readonly sourceUri: URI;
     readonly decorations?: ScmResourceDecorations;
+    readonly selected?: boolean;
 
     open(): Promise<void>;
 }

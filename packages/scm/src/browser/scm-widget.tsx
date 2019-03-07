@@ -14,7 +14,7 @@
  * SPDX-License-Identifier: EPL-2.0 OR GPL-2.0 WITH Classpath-exception-2.0
  ********************************************************************************/
 import { injectable, inject, postConstruct } from 'inversify';
-import { ContextMenuRenderer, ReactWidget, StatefulWidget } from '@theia/core/lib/browser';
+import { ContextMenuRenderer, SELECTED_CLASS, StatefulWidget } from '@theia/core/lib/browser';
 import * as React from 'react';
 import { AlertMessage } from '@theia/core/lib/browser/widgets/alert-message';
 import {
@@ -30,19 +30,32 @@ import { EditorManager } from '@theia/editor/lib/browser';
 import { ScmTitleCommandRegistry } from './scm-title-command-registry';
 import { ScmResourceCommandRegistry } from './scm-resource-command-registry';
 import { ScmGroupCommandRegistry } from './scm-group-command-registry';
+import { ScmNavigableListWidget } from './scm-navigable-list-widget';
 
 @injectable()
-export class ScmWidget extends ReactWidget implements StatefulWidget {
+export class ScmWidget extends ScmNavigableListWidget<ScmResource> implements StatefulWidget {
     private static MESSAGE_BOX_MIN_HEIGHT = 25;
 
     protected message: string = '';
     protected messageBoxHeight: number = ScmWidget.MESSAGE_BOX_MIN_HEIGHT;
     protected inputCommandMessageValidator: InputValidator | undefined;
     protected inputCommandMessageValidationResult: InputValidator.Result | undefined;
-    protected scrollContainer: string;
     protected listContainer: ScmResourceGroupsContainer | undefined;
 
     private selectedRepoUri: string | undefined;
+    protected readonly selectChange = (change: ScmResource) => {
+        const repository = this.scmService.selectedRepository;
+        if (repository) {
+            const resources: ScmResource[] = [];
+            const groups = repository.provider.groups;
+            if (groups) {
+                groups.forEach(group => group.resources.forEach(resource => resources.push(resource)));
+                this.scmNodes = resources;
+            }
+        }
+        this.selectNode(change);
+    }
+    protected readonly handleEnter: () => void;
 
     @inject(ScmTitleCommandRegistry) protected readonly scmTitleRegistry: ScmTitleCommandRegistry;
     @inject(ScmResourceCommandRegistry) protected readonly scmResourceCommandRegistry: ScmResourceCommandRegistry;
@@ -79,6 +92,24 @@ export class ScmWidget extends ReactWidget implements StatefulWidget {
         });
     }
 
+    protected addScmListKeyListeners = (id: string) => this.doAddScmListKeyListeners(id);
+    protected doAddScmListKeyListeners(id: string) {
+        const container = document.getElementById(id);
+        if (container) {
+            this.addScmListNavigationKeyListeners(container);
+        }
+    }
+
+    protected handleListEnter() {
+        const selected = this.getSelected();
+        if (selected) {
+            const commands = this.scmResourceCommandRegistry.getCommands(selected.group.label);
+            if (commands && commands.length > 0) {
+                this.commandRegistry.executeCommand(commands[0], selected.sourceUri.toString());
+            }
+        }
+    }
+
     protected render(): React.ReactNode {
         let repository;
         if (this.selectedRepoUri) {
@@ -105,6 +136,9 @@ export class ScmWidget extends ReactWidget implements StatefulWidget {
                 scmResourceCommandRegistry={this.scmResourceCommandRegistry}
                 scmGroupCommandRegistry={this.scmGroupCommandRegistry}
                 commandRegistry={this.commandRegistry}
+                selectChange={this.selectChange}
+                scmNodes={this.scmNodes}
+                addScmListKeyListeners={this.addScmListKeyListeners}
             />
         </div>;
     }
@@ -298,7 +332,8 @@ export namespace ScmWidget {
     export namespace ContextMenu {
         export const PATH: MenuPath = ['scm-widget-context-menu'];
         export const INPUT_GROUP: MenuPath = [...PATH, '1_input'];
-        export const OTHER_GROUP: MenuPath = [...PATH, '2_other'];
+        export const FIRST_GROUP: MenuPath = [...PATH, '2_other'];
+        export const SECOND_GROUP: MenuPath = [...PATH, '3_other'];
         export const BATCH: MenuPath = [...PATH, '3_batch'];
     }
 }
@@ -314,18 +349,20 @@ export namespace ScmResourceItem {
         groupLabel: string,
         scmResourceCommandRegistry: ScmResourceCommandRegistry,
         commandRegistry: CommandRegistry,
-        open: () => Promise<void>
+        open: () => Promise<void>,
+        selectChange: (change: ScmResource) => void
     }
 }
 
 class ScmResourceItem extends React.Component<ScmResourceItem.Props> {
+    protected readonly selectChange = () => this.props.selectChange(this.props.resource);
     render() {
         const {name, path, icon, letter, color, open} = this.props;
         const style = {
             color
         };
-        return <div className={`scmItem ${ScmWidget.Styles.NO_SELECT}`}>
-            <div className='noWrapInfo' onClick={open}>
+        return <div className={`scmItem ${ScmWidget.Styles.NO_SELECT}${this.props.resource.selected ? ' ' + SELECTED_CLASS : ''}`}>
+            <div className='noWrapInfo' onDoubleClick={open} onClick={this.selectChange}>
                 <span className={icon + ' file-icon'}/>
                 <span className='name'>{name}</span>
                 <span className='path'>{path}</span>
@@ -367,14 +404,17 @@ export namespace ScmResourceGroupsContainer {
         repository: ScmRepository,
         scmResourceCommandRegistry: ScmResourceCommandRegistry,
         scmGroupCommandRegistry: ScmGroupCommandRegistry,
-        commandRegistry: CommandRegistry;
+        commandRegistry: CommandRegistry,
+        selectChange: (change: ScmResource) => void,
+        addScmListKeyListeners: (id: string) => void,
+        scmNodes: ScmResource[]
     }
 }
 
 class ScmResourceGroupsContainer extends React.Component<ScmResourceGroupsContainer.Props> {
     render() {
         return (
-            <div className={ScmWidget.Styles.GROUPS_CONTAINER} id={this.props.id}>
+            <div className={ScmWidget.Styles.GROUPS_CONTAINER} id={this.props.id} tabIndex={2}>
                 {this.props.repository.provider.groups ? this.props.repository.provider.groups.map(group => this.renderGroup(group)) : undefined}
             </div>
         );
@@ -387,17 +427,24 @@ class ScmResourceGroupsContainer extends React.Component<ScmResourceGroupsContai
                 key={group.id}
                 scmResourceCommandRegistry={this.props.scmResourceCommandRegistry}
                 scmGroupCommandRegistry={this.props.scmGroupCommandRegistry}
+                selectChange={this.props.selectChange}
+                scmNodes={this.props.scmNodes}
                 commandRegistry={this.props.commandRegistry}/>;
         }
+    }
+    componentDidMount() {
+        this.props.addScmListKeyListeners(this.props.id);
     }
 }
 
 namespace ScmResourceGroupContainer {
     export interface Props {
         group: ScmResourceGroup,
+        scmNodes: ScmResource[],
         scmResourceCommandRegistry: ScmResourceCommandRegistry
         scmGroupCommandRegistry: ScmGroupCommandRegistry
         commandRegistry: CommandRegistry;
+        selectChange: (change: ScmResource) => void
     }
 }
 
@@ -410,7 +457,7 @@ class ScmResourceGroupContainer extends React.Component<ScmResourceGroupContaine
                 {this.renderChangeCount(group.resources.length)}
                 {this.renderGroupButtons()}
             </div>
-            <div>{group.resources.map(resource => this.renderScmResourceItem(resource, group.provider.rootUri))}</div>
+            <div>{group.resources.map(resource => this.renderScmResourceItem(this.props.scmNodes, resource, group.provider.rootUri))}</div>
         </div>;
     }
 
@@ -443,7 +490,7 @@ class ScmResourceGroupContainer extends React.Component<ScmResourceGroupContaine
         }
     }
 
-    protected renderScmResourceItem(resource: ScmResource, repoUri: string | undefined): React.ReactNode {
+    protected renderScmResourceItem(scmNodes: ScmResource[], resource: ScmResource, repoUri: string | undefined): React.ReactNode {
         if (!repoUri) {
             return undefined;
         }
@@ -451,6 +498,13 @@ class ScmResourceGroupContainer extends React.Component<ScmResourceGroupContaine
             resource.open();
             return Promise.resolve(undefined);
         };
+        if (scmNodes) {
+            const res = scmNodes.find(node => node.sourceUri.toString() === resource.sourceUri.toString() &&
+                ((node.group && resource.group) ? node.group.label === resource.group.label : true));
+            if (res) {
+                resource = res;
+            }
+        }
         const decorations = resource.decorations;
         const uri = resource.sourceUri.path.toString();
         const project = repoUri.substring(repoUri.lastIndexOf('/') + 1);
@@ -467,6 +521,7 @@ class ScmResourceGroupContainer extends React.Component<ScmResourceGroupContaine
                                 groupLabel={this.props.group.label}
                                 commandRegistry={this.props.commandRegistry}
                                 scmResourceCommandRegistry={this.props.scmResourceCommandRegistry}
+                                selectChange={this.props.selectChange}
         />;
     }
 }

@@ -1,5 +1,7 @@
 # Change Log
-
+## v0.5.0
+- [scm] added Source Control Model
+- [git] bind Git UI to SCM
 ## v0.4.0
 - [application-manager] added support for pre-load HTML templates
 - [console] added support for console `when` contexts
