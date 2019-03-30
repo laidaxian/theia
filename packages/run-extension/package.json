@@ -3,7 +3,9 @@
   "keywords": [
     "theia-extension"
   ],
-  "version": "0.2.1",
+  "description": "DataExa - Run Extension",
+  "author": "laidx<laidx@dataexa.com>",
+  "version": "0.2.5",
   "files": [
     "lib",
     "src"
