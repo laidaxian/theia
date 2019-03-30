@@ -399,7 +399,7 @@ export class PreferencesEditorsContainer extends DockPanel {
 
     private async getFolderSettingsUri(folder: string | undefined): Promise<URI | undefined> {
         if (folder) {
-            const settingsUri = new URI(folder).resolve('.theia').resolve('settings.json');
+            const settingsUri = new URI(folder).resolve('.dataexa').resolve('settings.json');
             if (!(await this.fileSystem.exists(settingsUri.toString()))) {
                 await this.fileSystem.createFile(settingsUri.toString());
             }

@@ -42,7 +42,7 @@ export class WorkspacePreferenceProvider extends AbstractResourcePreferenceProvi
         const workspace = this.workspaceService.workspace;
         if (workspace) {
             const uri = new URI(workspace.uri);
-            return workspace.isDirectory ? uri.resolve('.theia').resolve('settings.json') : uri;
+            return workspace.isDirectory ? uri.resolve('.dataexa').resolve('settings.json') : uri;
         }
     }
 

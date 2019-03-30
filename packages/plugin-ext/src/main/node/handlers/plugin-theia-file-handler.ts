@@ -28,7 +28,7 @@ export class PluginTheiaFileHandler implements PluginDeployerFileHandler {
     }
 
     accept(resolvedPlugin: PluginDeployerEntry): boolean {
-        return resolvedPlugin.isFile() && resolvedPlugin.path() !== null && resolvedPlugin.path().endsWith('.theia');
+        return resolvedPlugin.isFile() && resolvedPlugin.path() !== null && resolvedPlugin.path().endsWith('.dataexa');
     }
 
     async handle(context: PluginDeployerFileHandlerContext): Promise<void> {

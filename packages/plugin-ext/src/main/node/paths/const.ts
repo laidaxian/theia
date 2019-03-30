@@ -18,7 +18,7 @@ export namespace PluginPaths {
     export const WINDOWS_APP_DATA_DIR = 'AppData';
     export const WINDOWS_ROAMING_DIR = 'Roaming';
 
-    export const THEIA_DIR = '.theia';
+    export const THEIA_DIR = '.dataexa';
     export const PLUGINS_LOGS_DIR = 'logs';
     export const PLUGINS_GLOBAL_STORAGE_DIR = 'plugin-storage';
     export const PLUGINS_WORKSPACE_STORAGE_DIR = 'workspace-storage';

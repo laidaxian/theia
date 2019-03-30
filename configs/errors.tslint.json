@@ -35,7 +35,7 @@
       true,
       180
     ],
-    "no-any": true,
+    "no-any": false,
     "no-consecutive-blank-lines": true,
     "no-construct": true,
     "no-magic-numbers": false,

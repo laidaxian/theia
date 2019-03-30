@@ -63,6 +63,7 @@ module.exports = {
         __dirname: false,
         __filename: false`, `
         fs: 'empty',
+        tls: 'empty',
         child_process: 'empty',
         net: 'empty',
         crypto: 'empty'`)}

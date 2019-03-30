@@ -17,8 +17,7 @@
 import * as mv from 'mv';
 import * as trash from 'trash';
 import * as paths from 'path';
-import * as fs from 'fs-extra';
-import { v4 } from 'uuid';
+// import * as fs from 'fs-extra';
 import * as os from 'os';
 import * as touch from 'touch';
 import * as drivelist from 'drivelist';
@@ -27,6 +26,11 @@ import { TextDocumentContentChangeEvent, TextDocument } from 'vscode-languageser
 import URI from '@theia/core/lib/common/uri';
 import { FileUri } from '@theia/core/lib/node/file-uri';
 import { FileStat, FileSystem, FileSystemClient, FileSystemError, FileMoveOptions, FileDeleteOptions, FileAccess } from '../common/filesystem';
+/**
+ * edit by laidx
+ */
+import { FileHttpServer } from '../dataexa/file-http-server';
+import { RequestOptions } from '../dataexa/http-server';
 
 @injectable()
 export class FileSystemNodeOptions {
@@ -44,6 +48,8 @@ export class FileSystemNodeOptions {
     };
 
 }
+
+const readFileRequestServer = new FileHttpServer();
 
 @injectable()
 export class FileSystemNode implements FileSystem {
@@ -64,7 +70,15 @@ export class FileSystemNode implements FileSystem {
     }
 
     async exists(uri: string): Promise<boolean> {
-        return fs.pathExists(FileUri.fsPath(new URI(uri)));
+        const demo: RequestOptions = {
+            type: 'post',
+            options: {
+                uri: FileUri.fsPath(uri)
+            }
+        };
+        const exist = await readFileRequestServer.pathExists(demo);
+        return exist;
+        // return fs.pathExists(FileUri.fsPath(new URI(uri)));
     }
 
     async resolveContent(uri: string, options?: { encoding?: string }): Promise<{ stat: FileStat, content: string }> {
@@ -77,7 +91,19 @@ export class FileSystemNode implements FileSystem {
             throw FileSystemError.FileIsDirectory(uri, 'Cannot resolve the content.');
         }
         const encoding = await this.doGetEncoding(options);
-        const content = await fs.readFile(FileUri.fsPath(_uri), { encoding });
+        /**
+         * edit by laidx
+         */
+        const demo: RequestOptions = {
+            type: 'post',
+            options: {
+                uri: FileUri.fsPath(uri),
+                encoding
+            }
+        };
+        const content: string = await readFileRequestServer.readFile(demo);
+        // console.log(FileUri.fsPath(uri), content);
+        // const content = await fs.readFile(FileUri.fsPath(_uri), { encoding });
         return { stat, content };
     }
 
@@ -94,7 +120,19 @@ export class FileSystemNode implements FileSystem {
             throw this.createOutOfSyncError(file, stat);
         }
         const encoding = await this.doGetEncoding(options);
-        await fs.writeFile(FileUri.fsPath(_uri), content, { encoding });
+
+        const demo: RequestOptions = {
+            type: 'post',
+            options: {
+                uri: FileUri.fsPath(file.uri),
+                encoding,
+                content
+            }
+        };
+        await readFileRequestServer.writeFile(demo);
+
+        // await fs.writeFile(FileUri.fsPath(_uri), content, { encoding });
+
         const newStat = await this.doGetStat(_uri, 1);
         if (newStat) {
             return newStat;
@@ -118,9 +156,28 @@ export class FileSystemNode implements FileSystem {
             return stat;
         }
         const encoding = await this.doGetEncoding(options);
-        const content = await fs.readFile(FileUri.fsPath(_uri), { encoding });
+
+        const demo1: RequestOptions = {
+            type: 'post',
+            options: {
+                uri: FileUri.fsPath(file.uri),
+                encoding
+            }
+        };
+        const content = await readFileRequestServer.readFile(demo1);
+
+        // const content = await fs.readFile(FileUri.fsPath(_uri), { encoding });
         const newContent = this.applyContentChanges(content, contentChanges);
-        await fs.writeFile(FileUri.fsPath(_uri), newContent, { encoding });
+        const demo: RequestOptions = {
+            type: 'post',
+            options: {
+                uri: FileUri.fsPath(file.uri),
+                encoding,
+                content: newContent
+            }
+        };
+        await readFileRequestServer.writeFile(demo);
+        // await fs.writeFile(FileUri.fsPath(_uri), newContent, { encoding });
         const newStat = await this.doGetStat(_uri, 1);
         if (newStat) {
             return newStat;
@@ -158,9 +215,6 @@ export class FileSystemNode implements FileSystem {
     }
 
     async move(sourceUri: string, targetUri: string, options?: FileMoveOptions): Promise<FileStat> {
-        if (this.client) {
-            this.client.onWillMove(sourceUri, targetUri);
-        }
         const result = await this.doMove(sourceUri, targetUri, options);
         if (this.client) {
             this.client.onDidMove(sourceUri, targetUri);
@@ -192,8 +246,26 @@ export class FileSystemNode implements FileSystem {
             // The value should be a Unix timestamp in seconds.
             // For example, `Date.now()` returns milliseconds, so it should be divided by `1000` before passing it in.
             const now = Date.now() / 1000;
-            await fs.utimes(FileUri.fsPath(_targetUri), now, now);
-            await fs.rmdir(FileUri.fsPath(_sourceUri));
+
+            const demo: RequestOptions = {
+                type: 'post',
+                options: {
+                    uri: FileUri.fsPath(_targetUri),
+                    utime: now
+                }
+            };
+            await readFileRequestServer.utimes(demo);
+
+            // await fs.utimes(FileUri.fsPath(_targetUri), now, now);
+
+            const demo1: RequestOptions = {
+                type: 'post',
+                options: {
+                    uri: FileUri.fsPath(_sourceUri)
+                }
+            };
+            await readFileRequestServer.rmdir(demo1);
+            // await fs.rmdir(FileUri.fsPath(_sourceUri));
             const newStat = await this.doGetStat(_targetUri, 1);
             if (newStat) {
                 return newStat;
@@ -231,7 +303,17 @@ export class FileSystemNode implements FileSystem {
         if (targetStat && !overwrite) {
             throw FileSystemError.FileExists(targetUri, "Did you set the 'overwrite' flag to true?");
         }
-        await fs.copy(FileUri.fsPath(_sourceUri), FileUri.fsPath(_targetUri), { overwrite, recursive });
+        const demo1: RequestOptions = {
+            type: 'post',
+            options: {
+                sourceUri: FileUri.fsPath(_sourceUri),
+                targetUri: FileUri.fsPath(_targetUri),
+                overwrite,
+                recursive
+            }
+        };
+        await readFileRequestServer.copy(demo1);
+        // await fs.copy(FileUri.fsPath(_sourceUri), FileUri.fsPath(_targetUri), { overwrite, recursive });
         const newStat = await this.doGetStat(_targetUri, 1);
         if (newStat) {
             return newStat;
@@ -247,11 +329,27 @@ export class FileSystemNode implements FileSystem {
             throw FileSystemError.FileExists(uri, 'Error occurred while creating the file.');
         }
         if (!parentStat) {
-            await fs.mkdirs(FileUri.fsPath(parentUri));
+            const demo1: RequestOptions = {
+                type: 'post',
+                options: {
+                    uri: FileUri.fsPath(_uri)
+                }
+            };
+            await readFileRequestServer.mkdirs(demo1);
+            // await fs.mkdirs(FileUri.fsPath(parentUri));
         }
         const content = await this.doGetContent(options);
         const encoding = await this.doGetEncoding(options);
-        await fs.writeFile(FileUri.fsPath(_uri), content, { encoding });
+        const demo: RequestOptions = {
+            type: 'post',
+            options: {
+                uri: FileUri.fsPath(uri),
+                encoding: encoding,
+                content
+            }
+        };
+        await readFileRequestServer.writeFile(demo);
+        // await fs.writeFile(FileUri.fsPath(_uri), content, { encoding });
         const newStat = await this.doGetStat(_uri, 1);
         if (newStat) {
             return newStat;
@@ -268,7 +366,14 @@ export class FileSystemNode implements FileSystem {
             }
             throw FileSystemError.FileExists(uri, 'Error occurred while creating the directory: path is a file.');
         }
-        await fs.mkdirs(FileUri.fsPath(_uri));
+        const demo: RequestOptions = {
+            type: 'post',
+            options: {
+                uri: FileUri.fsPath(uri)
+            }
+        };
+        await readFileRequestServer.mkdirs(demo);
+        // await fs.mkdirs(FileUri.fsPath(_uri));
         const newStat = await this.doGetStat(_uri, 1);
         if (newStat) {
             return newStat;
@@ -307,24 +412,14 @@ export class FileSystemNode implements FileSystem {
         if (moveToTrash) {
             return trash([FileUri.fsPath(_uri)]);
         } else {
-            const filePath = FileUri.fsPath(_uri);
-            const outputRootPath = paths.join(os.tmpdir(), v4());
-            try {
-                await new Promise<void>((resolve, reject) => {
-                    fs.rename(filePath, outputRootPath, async error => {
-                        if (error) {
-                            return reject(error);
-                        }
-                        resolve();
-                    });
-                });
-                // There is no reason for the promise returned by this function not to resolve
-                // as soon as the move is complete.  Clearing up the temporary files can be
-                // done in the background.
-                fs.remove(FileUri.fsPath(outputRootPath));
-            } catch (error) {
-                return fs.remove(filePath);
-            }
+            const demo: RequestOptions = {
+                type: 'post',
+                options: {
+                    uri: FileUri.fsPath(uri)
+                }
+            };
+            await readFileRequestServer.remove(demo);
+            // return fs.remove(FileUri.fsPath(_uri));
         }
     }
 
@@ -396,7 +491,15 @@ export class FileSystemNode implements FileSystem {
 
     async access(uri: string, mode: number = FileAccess.Constants.F_OK): Promise<boolean> {
         try {
-            await fs.access(FileUri.fsPath(uri), mode);
+            const demo: RequestOptions = {
+                type: 'post',
+                options: {
+                    uri: FileUri.fsPath(uri),
+                    mode
+                }
+            };
+            await readFileRequestServer.access(demo);
+            // await fs.access(FileUri.fsPath(uri), mode);
             return true;
         } catch {
             return false;
@@ -413,8 +516,19 @@ export class FileSystemNode implements FileSystem {
 
     protected async doGetStat(uri: URI, depth: number): Promise<FileStat | undefined> {
         try {
-            const stats = await fs.stat(FileUri.fsPath(uri));
-            if (stats.isDirectory()) {
+            // const uri__ = FileUri.fsPath(uri);
+            const demo: RequestOptions = {
+                type: 'post',
+                options: {
+                    uri: FileUri.fsPath(uri)
+                }
+            };
+            const stats = await readFileRequestServer.stat(demo);
+            if (!stats) {
+                return undefined;
+            }
+            // const stats = await fs.stat(uri__);
+            if (stats.isDirectory) {
                 return this.doCreateDirectoryStat(uri, stats, depth);
             }
             return this.doCreateFileStat(uri, stats);
@@ -428,27 +542,34 @@ export class FileSystemNode implements FileSystem {
         }
     }
 
-    protected async doCreateFileStat(uri: URI, stat: fs.Stats): Promise<FileStat> {
+    protected async doCreateFileStat(uri: URI, stat: FileStat): Promise<FileStat> {
         return {
             uri: uri.toString(),
-            lastModification: stat.mtime.getTime(),
+            lastModification: stat.lastModification,
             isDirectory: false,
             size: stat.size
         };
     }
 
-    protected async doCreateDirectoryStat(uri: URI, stat: fs.Stats, depth: number): Promise<FileStat> {
+    protected async doCreateDirectoryStat(uri: URI, stat: FileStat, depth: number): Promise<FileStat> {
         const children = depth > 0 ? await this.doGetChildren(uri, depth) : [];
         return {
             uri: uri.toString(),
-            lastModification: stat.mtime.getTime(),
+            lastModification: stat.lastModification,
             isDirectory: true,
             children
         };
     }
 
     protected async doGetChildren(uri: URI, depth: number): Promise<FileStat[]> {
-        const files = await fs.readdir(FileUri.fsPath(uri));
+        const demo: RequestOptions = {
+            type: 'post',
+            options: {
+                uri: FileUri.fsPath(uri)
+            }
+        };
+        const files = await readFileRequestServer.readdir(demo);
+        // const files = await fs.readdir(FileUri.fsPath(uri));
         const children = await Promise.all(files.map(fileName => uri.resolve(fileName)).map(childUri => this.doGetStat(childUri, depth - 1)));
         return children.filter(notEmpty);
     }

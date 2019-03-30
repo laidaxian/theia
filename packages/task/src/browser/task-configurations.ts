@@ -48,7 +48,7 @@ export class TaskConfigurations implements Disposable {
     protected watchersMap = new Map<string, Disposable>(); // map of watchers for task config files, where the key is folder uri
 
     /** last directory element under which we look for task config */
-    protected readonly TASKFILEPATH = '.theia';
+    protected readonly TASKFILEPATH = '.dataexa';
     /** task configuration file name */
     protected readonly TASKFILE = 'tasks.json';
 

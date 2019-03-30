@@ -1,0 +1,33 @@
+{
+  "name": "dataexa-run-extension",
+  "keywords": [
+    "theia-extension"
+  ],
+  "version": "0.1.5",
+  "files": [
+    "lib",
+    "src"
+  ],
+  "dependencies": {
+    "@theia/core": "^0.4.0",
+    "@theia/plugin": "^0.4.0",
+    "request": "next",
+    "util": "next"
+  },
+  "devDependencies": {
+    "rimraf": "latest",
+    "typescript": "latest"
+  },
+  "scripts": {
+    "prepare": "yarn run clean && yarn run build",
+    "clean": "rimraf lib",
+    "build": "tsc",
+    "watch": "tsc -w"
+  },
+  "theiaExtensions": [
+    {
+      "frontend": "lib/browser/dataexa-run-extension-frontend-module",
+      "backend": "lib/node/dataexa-run-extension-backend-module"
+    }
+  ]
+}

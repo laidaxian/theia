@@ -49,7 +49,7 @@ export class FolderPreferenceProvider extends AbstractResourcePreferenceProvider
     async getUri(): Promise<URI | undefined> {
         this.folderUri = new URI(this.options.folder.uri);
         if (await this.fileSystem.exists(this.folderUri.toString())) {
-            const uri = this.folderUri.resolve('.theia').resolve('settings.json');
+            const uri = this.folderUri.resolve('.dataexa').resolve('settings.json');
             return uri;
         }
     }

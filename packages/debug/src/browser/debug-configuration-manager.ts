@@ -71,7 +71,7 @@ export class DebugConfigurationManager {
         const toDelete = new Set(this.models.keys());
         for (const rootStat of roots) {
             const root = new URI(rootStat.uri);
-            for (const [provider, configPath] of [['theia', '.theia/launch.json'], ['vscode', '.vscode/launch.json']]) {
+            for (const [provider, configPath] of [['theia', '.dataexa/launch.json'], ['vscode', '.vscode/launch.json']]) {
                 const uri = root.resolve(configPath);
                 const key = uri.toString();
                 toDelete.delete(key);

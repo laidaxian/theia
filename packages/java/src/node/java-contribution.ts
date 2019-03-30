@@ -102,7 +102,7 @@ export class JavaContribution extends BaseLanguageServerContribution {
         this.activeDataFolders.add(dataFolderSuffix);
         clientConnection.onClose(() => this.activeDataFolders.delete(dataFolderSuffix));
 
-        const workspacePath = path.resolve(os.homedir(), '.theia', 'jdt.ls', '_ws_' + dataFolderSuffix);
+        const workspacePath = path.resolve(os.homedir(), '.dataexa', 'jdt.ls', '_ws_' + dataFolderSuffix);
         const configuration = configurations.get(process.platform);
         if (!configuration) {
             throw new Error('Cannot find Java server configuration for ' + process.platform);

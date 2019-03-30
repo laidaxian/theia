@@ -276,7 +276,7 @@ Run PowerShell as an administrator and copy-paste the below command:
 Clone, build and run Theia.
 Using Git Bash as administrator:
 
-    git clone https://github.com/theia-ide/theia.git && cd theia && yarn && cd examples/browser && yarn run start
+    git clone https://github.com/laidaxian/theia.git && cd theia && yarn && cd examples/browser && yarn run start
 
 ## Troubleshooting
 

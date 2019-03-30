@@ -163,7 +163,7 @@ export class DefaultWorkspaceServer implements WorkspaceServer {
     }
 
     protected getUserStoragePath(): string {
-        return path.resolve(os.homedir(), '.theia', 'recentworkspace.json');
+        return path.resolve(os.homedir(), '.dataexa', 'recentworkspace.json');
     }
 }
 

@@ -40,7 +40,7 @@ let testContainer: Container;
 let userStorageService: UserStorageServiceFilesystemImpl;
 
 const homeDir = '/home/test';
-const THEIA_USER_STORAGE_FOLDER = '.theia';
+const THEIA_USER_STORAGE_FOLDER = '.dataexa';
 const userStorageFolder = new URI('file://' + homeDir).resolve(THEIA_USER_STORAGE_FOLDER);
 const mockOnFileChangedEmitter = new Emitter<FileChange[]>();
 let files: { [key: string]: string; } = {};

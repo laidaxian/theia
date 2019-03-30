@@ -116,7 +116,7 @@ export class PreferenceEditorTabHeaderRenderer extends TabBar.Renderer {
 
     private async canAccessSettings(folderUriStr: string): Promise<boolean> {
         const folderUri = new URI(folderUriStr);
-        const settingsUriStr = folderUri.resolve('.theia').resolve('settings.json').toString();
+        const settingsUriStr = folderUri.resolve('.dataexa').resolve('settings.json').toString();
         if (await this.fileSystem.exists(settingsUriStr)) {
             return this.fileSystem.access(settingsUriStr, FileAccess.Constants.R_OK);
         }
